@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: bootMigration
+
+  # DataSource 설정
+  # JSP에서는 DBUtil.java에서 JDBC URL, 유저, 패스워드를 하드코딩했지만
+  # Spring Boot에서는 application.yaml에 선언하면 DataSource 빈이 자동 등록된다.
+  datasource:
+    url: jdbc:mysql://localhost:3306/blog_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: blog_user
+    password: blog1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA 설정
+  # JSP에서는 SQL을 직접 작성했지만, JPA는 엔티티 클래스를 기반으로 자동 매핑한다.
+  #
+  # [ddl-auto 옵션 설명]
+  # - validate : 엔티티와 테이블이 일치하는지 검증만 (테이블이 없으면 에러)
+  # - update   : 엔티티 기반으로 테이블 자동 생성/변경 (개발용)
+  # - create   : 매번 테이블 DROP 후 새로 생성
+  # - create-drop : 시작 시 생성, 종료 시 삭제
+  # - none     : 아무것도 안 함 (운영용, Flyway 등과 함께 사용)
+  #
+  # update로 설정하면 init.sql 없이도 @Entity 클래스 기반으로 테이블이 자동 생성된다.
+  jpa:
+    hibernate:
+      ddl-auto: update
+#    show-sql: true
+#    properties:
+#      hibernate:
+#        format_sql: true
+        # dialect는 명시하지 않아도 Hibernate가 DB 버전을 보고 자동 선택한다.
+
+  # Thymeleaf 설정
+  # JSP에서는 web.xml에 view resolver를 설정하거나 직접 forward 경로를 지정했지만
+  # Spring Boot + Thymeleaf는 자동 설정으로 templates/ 디렉토리를 찾는다.
+  thymeleaf:
+    cache: false  # 개발 중에는 캐시 비활성화
+
+server:
+  port: 8080
