@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>새 글 작성</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div th:replace="~{layout/header :: header}"></div>
+
+    <main class="main-content">
+        <div class="write-form">
+            <div class="form-card">
+                <form action="/post/write" method="post">
+                    <div class="form-group">
+                        <input type="text" name="title" class="title-input"
+                               placeholder="제목을 입력하세요" required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <textarea name="content" placeholder="당신의 이야기를 적어보세요..." required></textarea>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:var(--space-sm);">
+                        <a href="/" class="btn btn-secondary">취소</a>
+                        <button type="submit" class="btn btn-dark">출간하기</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{layout/footer :: footer}"></div>
+</body>
+</html>

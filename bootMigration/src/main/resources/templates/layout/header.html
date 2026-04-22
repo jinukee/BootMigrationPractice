@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<!--
+  공통 헤더 (Thymeleaf Fragment).
+
+  [JSP 대응]
+  JSP에서는 <jsp:include page="header.jsp"> 방식으로 include했다.
+  Thymeleaf에서는 th:fragment로 정의하고 th:replace로 삽입한다.
+  → 레이아웃 재사용 방식은 유사하나, 문법이 HTML 표준에 가까움.
+-->
+<header th:fragment="header" class="header">
+    <div class="header-inner">
+        <a href="/" class="header-logo">
+            Blog<span class="logo-dot"></span>
+        </a>
+        <nav class="header-nav">
+            <!--
+              [JSP 대응]
+              JSP:   <c:if test="${not empty sessionScope.loginUser}">
+              Thymeleaf: th:if="${session.loginUser != null}"
+              → JSTL의 <c:if>/<c:choose>가 th:if/th:unless로 변환됨.
+            -->
+            <th:block th:if="${session.loginUser != null}">
+                <span class="user-info" th:text="${session.loginUser.nickname + '님'}">유저님</span>
+                <a href="/post/write" class="btn-write">새 글 작성</a>
+                <a href="/user/edit">내 정보</a>
+                <form action="/user/logout" method="get" style="display:inline;">
+                    <button type="submit">로그아웃</button>
+                </form>
+            </th:block>
+            <th:block th:unless="${session.loginUser != null}">
+                <a href="/user/login">로그인</a>
+                <a href="/user/register" class="btn-write">회원가입</a>
+            </th:block>
+        </nav>
+    </div>
+</header>
+</html>

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<!--
+  공통 푸터 (Thymeleaf Fragment).
+
+  [JSP 대응]
+  JSP:  <jsp:include page="footer.jsp">
+  Thymeleaf: <div th:replace="~{layout/footer :: footer}">
+-->
+<footer th:fragment="footer" class="footer">
+    &copy; 2026 Blog. Spring Boot Practice
+</footer>
+</html>
