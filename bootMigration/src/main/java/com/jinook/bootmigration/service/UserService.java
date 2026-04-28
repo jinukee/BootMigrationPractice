@@ -71,13 +71,13 @@ public class UserService {
     @Transactional
     public UserDTO updateUser(Long id, String nickname, String password) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다.")); // user를 꺼내왔다면 jpa persistence context에 snapshot 저장
 
         String hashedPassword = (password != null && !password.isBlank())
                 ? hashPassword(password)
                 : null;
 
-        user.updateProfile(nickname, hashedPassword);
+        user.updateProfile(nickname, hashedPassword); // commit 직전에 persistence context에 snapshot으로부터 변경점이 있으면 Update SQL을 DB에 전송
         return toDTO(user);
     }
 
