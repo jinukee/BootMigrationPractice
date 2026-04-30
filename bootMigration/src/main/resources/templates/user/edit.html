@@ -16,7 +16,7 @@
             <h1 class="form-title">내 정보 수정</h1>
             <div class="form-card">
                 <div th:if="${error}" class="alert alert-error" th:text="${error}">에러 메시지</div>
-                <form action="/user/update" method="post">
+                <form th:action="@{/user/update}" method="post">
                     <div class="form-group">
                         <label for="email">이메일</label>
                         <!--
@@ -44,7 +44,7 @@
                 <!-- 회원탈퇴 영역 -->
                 <div class="danger-zone">
                     <p class="danger-zone-title">⚠ 위험 구역</p>
-                    <form action="/user/delete" method="post"
+                    <form th:action="@{/user/delete}" method="post"
                           onsubmit="return confirm('정말 탈퇴하시겠습니까? 작성한 모든 게시글이 삭제됩니다.');">
                         <button type="submit" class="btn btn-danger btn-block">회원탈퇴</button>
                     </form>

@@ -31,11 +31,12 @@
             <div class="post-detail-content" th:text="${post.content}">게시글 내용</div>
 
             <!--
-              [JSP 대응]
-              JSP:   ${not empty sessionScope.loginUser && sessionScope.loginUser.id == post.userId}
-              Thymeleaf: ${session.loginUser != null && session.loginUser.id == post.userId}
+              [Spring Security 도입 후 변경사항]
+              Before: ${session.loginUser != null && session.loginUser.id == post.userId}
+              After:  ${loginUserId != null && loginUserId == post.userId}
+              → Controller에서 @AuthenticationPrincipal로 추출한 ID를 model에 전달
             -->
-            <div th:if="${session.loginUser != null && session.loginUser.id == post.userId}"
+            <div th:if="${loginUserId != null && loginUserId == post.userId}"
                  class="post-detail-actions">
                 <a th:href="@{/post/{id}/edit(id=${post.id})}" class="btn btn-secondary btn-sm">수정</a>
                 <form th:action="@{/post/{id}/delete(id=${post.id})}" method="post"

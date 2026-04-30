@@ -21,7 +21,7 @@
                   Thymeleaf: th:if="${error}"
                 -->
                 <div th:if="${error}" class="alert alert-error" th:text="${error}">에러 메시지</div>
-                <form action="/user/register" method="post">
+                <form th:action="@{/user/register}" method="post">
                     <div class="form-group">
                         <label for="email">이메일</label>
                         <input type="email" id="email" name="email" placeholder="example@email.com" required>

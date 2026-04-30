@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <!--
   공통 헤더 (Thymeleaf Fragment).
 
-  [JSP 대응]
-  JSP에서는 <jsp:include page="header.jsp"> 방식으로 include했다.
-  Thymeleaf에서는 th:fragment로 정의하고 th:replace로 삽입한다.
-  → 레이아웃 재사용 방식은 유사하나, 문법이 HTML 표준에 가까움.
+  [Spring Security 도입 후 변경사항]
+  - Before: ${session.loginUser != null}으로 세션에서 직접 로그인 상태 확인
+  - After:  sec:authorize="isAuthenticated()"로 Spring Security 인증 상태 확인
+  - 닉네임: sec:authentication="principal.nickname"으로 CustomUserDetails에서 추출
+  - 로그아웃: POST 방식으로 변경 (CSRF 토큰 필수, th:action이 자동 삽입)
 -->
 <header th:fragment="header" class="header">
     <div class="header-inner">
@@ -14,21 +16,18 @@
             Blog<span class="logo-dot"></span>
         </a>
         <nav class="header-nav">
-            <!--
-              [JSP 대응]
-              JSP:   <c:if test="${not empty sessionScope.loginUser}">
-              Thymeleaf: th:if="${session.loginUser != null}"
-              → JSTL의 <c:if>/<c:choose>가 th:if/th:unless로 변환됨.
-            -->
-            <th:block th:if="${session.loginUser != null}">
-                <span class="user-info" th:text="${session.loginUser.nickname + '님'}">유저님</span>
+            <!-- 로그인 상태 -->
+            <th:block sec:authorize="isAuthenticated()">
+                <span class="user-info" sec:authentication="principal.nickname">유저님</span>
+                <span class="user-info">님</span>
                 <a href="/post/write" class="btn-write">새 글 작성</a>
                 <a href="/user/edit">내 정보</a>
-                <form action="/user/logout" method="get" style="display:inline;">
+                <form th:action="@{/user/logout}" method="post" style="display:inline;">
                     <button type="submit">로그아웃</button>
                 </form>
             </th:block>
-            <th:block th:unless="${session.loginUser != null}">
+            <!-- 비로그인 상태 -->
+            <th:block sec:authorize="!isAuthenticated()">
                 <a href="/user/login">로그인</a>
                 <a href="/user/register" class="btn-write">회원가입</a>
             </th:block>

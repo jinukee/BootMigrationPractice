@@ -15,8 +15,15 @@
         <div class="form-container">
             <h1 class="form-title">로그인</h1>
             <div class="form-card">
-                <div th:if="${error}" class="alert alert-error" th:text="${error}">에러 메시지</div>
-                <form action="/user/login" method="post">
+                <!--
+                  [Spring Security 도입 후 변경사항]
+                  - Before: ${error}로 Controller에서 전달한 에러 메시지 표시
+                  - After:  ${param.error}로 Spring Security가 URL에 추가한 error 파라미터 확인
+                  - name="email": SecurityConfig에서 usernameParameter("email")로 설정했으므로 유지
+                  - th:action: Thymeleaf가 자동으로 CSRF 토큰을 hidden input으로 삽입
+                -->
+                <div th:if="${param.error}" class="alert alert-error">이메일 또는 비밀번호가 올바르지 않습니다.</div>
+                <form th:action="@{/user/login}" method="post">
                     <div class="form-group">
                         <label for="email">이메일</label>
                         <input type="email" id="email" name="email" placeholder="example@email.com" required>

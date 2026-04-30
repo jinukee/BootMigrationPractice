@@ -14,7 +14,7 @@
     <main class="main-content">
         <div class="write-form">
             <div class="form-card">
-                <form action="/post/write" method="post">
+                <form th:action="@{/post/write}" method="post">
                     <div class="form-group">
                         <input type="text" name="title" class="title-input"
                                placeholder="제목을 입력하세요" required autofocus>
