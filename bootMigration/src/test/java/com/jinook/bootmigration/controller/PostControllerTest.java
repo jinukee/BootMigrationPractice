@@ -1,8 +1,9 @@
 package com.jinook.bootmigration.controller;
 
-import com.jinook.bootmigration.config.WebConfig;
+import com.jinook.bootmigration.config.SecurityConfig;
 import com.jinook.bootmigration.dto.PostDTO;
-import com.jinook.bootmigration.dto.UserDTO;
+import com.jinook.bootmigration.security.CustomUserDetails;
+import com.jinook.bootmigration.security.CustomUserDetailsService;
 import com.jinook.bootmigration.service.PostService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -10,10 +11,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -21,7 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willDoNothing;
-import static org.mockito.BDDMockito.willThrow;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -29,16 +31,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * PostController 슬라이스 테스트.
  *
- * [테스트 방식: 슬라이스 테스트 (Slice Test)]
- * - UserControllerTest와 동일한 방식.
- * - 게시글 CRUD의 HTTP 요청/응답 + 세션 기반 권한 처리를 검증한다.
- *
- * [핵심 학습 포인트]
- * - @PathVariable 테스트: URL 경로에 변수가 포함된 경우의 테스트 방법
- * - 세션 의존 테스트: MockHttpSession으로 로그인 상태를 시뮬레이션
+ * [Spring Security 도입 후 변경사항]
+ * - MockHttpSession → .with(user(customUserDetails))
+ * - POST 요청에 .with(csrf()) 필수
+ * - 비로그인 접근 시 로그인 페이지로 리다이렉트 확인
  */
 @WebMvcTest(PostController.class)
-@Import(WebConfig.class)
+@Import(SecurityConfig.class)
 class PostControllerTest {
 
     @Autowired
@@ -47,17 +46,22 @@ class PostControllerTest {
     @MockitoBean
     private PostService postService;
 
+    @MockitoBean
+    private CustomUserDetailsService customUserDetailsService;
+
+    @MockitoBean
+    private PasswordEncoder passwordEncoder;
+
     // === 테스트용 헬퍼 ===
 
-    private MockHttpSession createLoginSession() {
-        MockHttpSession session = new MockHttpSession();
-        UserDTO loginUser = UserDTO.builder()
-                .id(1L)
+    private CustomUserDetails createTestUserDetails() {
+        com.jinook.bootmigration.entity.User user = com.jinook.bootmigration.entity.User.builder()
                 .email("test@email.com")
+                .password("encodedPassword")
                 .nickname("테스터")
                 .build();
-        session.setAttribute("loginUser", loginUser);
-        return session;
+        setField(user, "id", 1L);
+        return new CustomUserDetails(user);
     }
 
     private PostDTO createTestPostDTO() {
@@ -67,8 +71,8 @@ class PostControllerTest {
                 .content("테스트 내용")
                 .userId(1L)
                 .authorNickname("테스터")
-                .createdAt(java.time.LocalDateTime.now())
-                .updatedAt(java.time.LocalDateTime.now())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
     }
 
@@ -80,17 +84,24 @@ class PostControllerTest {
     class ListPosts {
 
         @Test
-        @DisplayName("GET /posts → 게시글 목록 페이지 반환 (비로그인도 접근 가능)")
+        @DisplayName("GET /posts → 인증된 사용자는 게시글 목록 페이지 조회 가능")
         void list_success() throws Exception {
-            // given
+            CustomUserDetails userDetails = createTestUserDetails();
             List<PostDTO> postList = List.of(createTestPostDTO());
             given(postService.findAll()).willReturn(postList);
 
-            // when & then
-            mockMvc.perform(get("/posts"))
+            mockMvc.perform(get("/posts").with(user(userDetails)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("post/list"))
                     .andExpect(model().attributeExists("postList"));
+        }
+
+        @Test
+        @DisplayName("GET /posts → 비인증 사용자는 로그인 페이지로 리다이렉트")
+        void list_unauthenticated_redirectsToLogin() throws Exception {
+            mockMvc.perform(get("/posts"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/user/login"));
         }
     }
 
@@ -102,17 +113,17 @@ class PostControllerTest {
     class Detail {
 
         @Test
-        @DisplayName("GET /post/{id} → 게시글 상세 페이지 반환 (비로그인도 접근 가능)")
+        @DisplayName("GET /post/{id} → 인증된 사용자는 게시글 상세 조회 가능")
         void detail_success() throws Exception {
-            // given
+            CustomUserDetails userDetails = createTestUserDetails();
             PostDTO post = createTestPostDTO();
             given(postService.findById(10L)).willReturn(post);
 
-            // when & then - @PathVariable로 id를 전달
-            mockMvc.perform(get("/post/10"))
+            mockMvc.perform(get("/post/10").with(user(userDetails)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("post/detail"))
-                    .andExpect(model().attribute("post", post));
+                    .andExpect(model().attribute("post", post))
+                    .andExpect(model().attribute("loginUserId", 1L));
         }
     }
 
@@ -124,11 +135,11 @@ class PostControllerTest {
     class Write {
 
         @Test
-        @DisplayName("GET /post/write → 작성 폼 페이지 반환 (로그인 필수)")
+        @DisplayName("GET /post/write → 작성 폼 페이지 반환")
         void writeForm_success() throws Exception {
-            MockHttpSession session = createLoginSession();
+            CustomUserDetails userDetails = createTestUserDetails();
 
-            mockMvc.perform(get("/post/write").session(session))
+            mockMvc.perform(get("/post/write").with(user(userDetails)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("post/write"));
         }
@@ -136,13 +147,12 @@ class PostControllerTest {
         @Test
         @DisplayName("POST /post/write 성공 → 홈으로 리다이렉트")
         void write_success() throws Exception {
-            // given
-            MockHttpSession session = createLoginSession();
+            CustomUserDetails userDetails = createTestUserDetails();
             willDoNothing().given(postService).write(any(PostDTO.class), eq(1L));
 
-            // when & then
             mockMvc.perform(post("/post/write")
-                            .session(session)
+                            .with(user(userDetails))
+                            .with(csrf())
                             .param("title", "새 글 제목")
                             .param("content", "새 글 내용"))
                     .andExpect(status().is3xxRedirection())
@@ -160,13 +170,11 @@ class PostControllerTest {
         @Test
         @DisplayName("GET /post/{id}/edit → 수정 폼 반환 (본인 글)")
         void editForm_success() throws Exception {
-            // given - 로그인 유저 ID(1)와 게시글 작성자 ID(1)가 동일
-            MockHttpSession session = createLoginSession();
-            PostDTO post = createTestPostDTO(); // userId = 1L
+            CustomUserDetails userDetails = createTestUserDetails();
+            PostDTO post = createTestPostDTO();
             given(postService.findById(10L)).willReturn(post);
 
-            // when & then
-            mockMvc.perform(get("/post/10/edit").session(session))
+            mockMvc.perform(get("/post/10/edit").with(user(userDetails)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("post/edit"))
                     .andExpect(model().attribute("post", post));
@@ -175,18 +183,15 @@ class PostControllerTest {
         @Test
         @DisplayName("GET /post/{id}/edit → 타인 글 수정 시 홈으로 리다이렉트")
         void editForm_notAuthor_redirectsToHome() throws Exception {
-            // given - 로그인 유저 ID(1)와 게시글 작성자 ID(2)가 다름
-            MockHttpSession session = createLoginSession();
+            CustomUserDetails userDetails = createTestUserDetails();
             PostDTO otherPost = PostDTO.builder()
-                    .id(10L)
-                    .title("남의 글")
-                    .content("내용")
+                    .id(10L).title("남의 글").content("내용")
                     .userId(2L)  // 다른 유저의 글
+                    .createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now())
                     .build();
             given(postService.findById(10L)).willReturn(otherPost);
 
-            // when & then
-            mockMvc.perform(get("/post/10/edit").session(session))
+            mockMvc.perform(get("/post/10/edit").with(user(userDetails)))
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/"));
         }
@@ -194,13 +199,12 @@ class PostControllerTest {
         @Test
         @DisplayName("POST /post/{id}/update 성공 → 해당 게시글 상세 페이지로 리다이렉트")
         void update_success() throws Exception {
-            // given
-            MockHttpSession session = createLoginSession();
+            CustomUserDetails userDetails = createTestUserDetails();
             willDoNothing().given(postService).update(eq(10L), eq("수정 제목"), eq("수정 내용"), eq(1L));
 
-            // when & then
             mockMvc.perform(post("/post/10/update")
-                            .session(session)
+                            .with(user(userDetails))
+                            .with(csrf())
                             .param("title", "수정 제목")
                             .param("content", "수정 내용"))
                     .andExpect(status().is3xxRedirection())
@@ -218,17 +222,27 @@ class PostControllerTest {
         @Test
         @DisplayName("POST /post/{id}/delete 성공 → 홈으로 리다이렉트")
         void delete_success() throws Exception {
-            // given
-            MockHttpSession session = createLoginSession();
+            CustomUserDetails userDetails = createTestUserDetails();
             willDoNothing().given(postService).delete(10L, 1L);
 
-            // when & then
-            mockMvc.perform(post("/post/10/delete").session(session))
+            mockMvc.perform(post("/post/10/delete")
+                            .with(user(userDetails))
+                            .with(csrf()))
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/"));
 
-            // delete가 호출되었는지 검증
             then(postService).should().delete(10L, 1L);
+        }
+    }
+
+    // === Reflection 헬퍼 ===
+    private void setField(Object target, String fieldName, Object value) {
+        try {
+            java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (Exception e) {
+            throw new RuntimeException("Reflection 필드 설정 실패: " + fieldName, e);
         }
     }
 }
