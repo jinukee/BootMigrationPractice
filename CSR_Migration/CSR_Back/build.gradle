@@ -1,0 +1,62 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.6'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.jinook'
+version = '0.0.1-SNAPSHOT'
+description = 'CSR_Back'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // ──────────────────────────────────────────────────────────────
+    // [SSR 대응] bootMigration에서는 starter-webmvc + starter-thymeleaf였지만,
+    // CSR에서는 Thymeleaf가 불필요하고 REST API만 제공하므로 starter-webmvc만 사용.
+    // ──────────────────────────────────────────────────────────────
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+
+    // [SSR 동등성] JPA + MySQL — Entity/Repository 계층은 동일하게 재사용
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // [SSR 동등성] Spring Security — 인증/인가 프레임워크는 동일
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // ──────────────────────────────────────────────────────────────
+    // [아키텍처 차이] JWT 라이브러리 (SSR에서는 불필요했음)
+    // SSR: FormLogin + Session 기반 인증 → CSRF 토큰 필요
+    // CSR: JWT Token 기반 Stateless 인증 → CSRF 불필요
+    // ──────────────────────────────────────────────────────────────
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // [SSR 동등성] Lombok — 보일러플레이트 코드 제거
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // DevTools
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
